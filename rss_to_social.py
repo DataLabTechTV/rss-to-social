@@ -71,7 +71,8 @@ def store_last_runs(last_runs: dict[str, struct_time]) -> None:
 
 
 @click.command()
-def main():
+@click.option("--force-latest", click.INT, default=0)
+def main(force_latest: int):
     log.info("Running RSS to Social")
 
     last_runs = load_last_runs()
@@ -82,12 +83,18 @@ def main():
         log.info(f"Parsing feed #{idx}: {feed_url}")
 
         feed = feedparser.parse(feed_url)
+        sorted_entries = sorted(
+            feed.entries,
+            key=lambda e: e.published_parsed,
+            reverse=True,
+        )
 
         new_entries = []
 
-        for entry in feed.entries:
+        for n, entry in enumerate(sorted_entries):
             if (
                 feed_url not in last_runs
+                or n < force_latest
                 or entry.published_parsed > last_runs[feed_url]
             ):
                 new_entries.append(entry)
