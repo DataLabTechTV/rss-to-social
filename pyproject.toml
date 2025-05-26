@@ -5,7 +5,9 @@ description = "RSS to Social uses GitHub Actions to monitor RSS feeds and post n
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "atproto>=0.0.61",
     "click>=8.2.1",
     "feedparser>=6.0.11",
     "loguru>=0.7.3",
+    "requests>=2.32.3",
 ]

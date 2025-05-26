@@ -34,6 +34,9 @@ jobs:
             --force-latest ${{ github.event.inputs.force_latest }}
         env:
           RSS_FEED_URLS: ${{ vars.RSS_FEED_URLS }}
+          ACTIVE_SOCIALS: ${{ vars.ACTIVE_SOCIALS }}
+          BSKY_USERNAME: ${{ vars.BSKY_USERNAME }}
+          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
 
       - name: Commit updated $LAST_RUNS_PATH if changed
         run: |
