@@ -3,7 +3,7 @@ import os
 import sys
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from time import mktime, struct_time
 from typing import Optional, Self
@@ -109,14 +109,18 @@ def download_image(url: str) -> Path:
 
 @dataclass
 class Post:
-    message: str
+    title: str
+    description: str
     link: Optional[str] = None
     image_path: Optional[str] = None
     image_alt: Optional[str] = None
 
     @classmethod
     def from_entry(cls, entry: FeedParserDict) -> Self:
-        post = cls(message=f"{entry.title} - {entry.summary}")
+        post = cls(
+            title=entry.title,
+            description=entry.summary,
+        )
 
         post.link = entry.link
 
@@ -139,6 +143,8 @@ class Post:
 
 
 def post_to_bluesky(post: Post) -> None:
+    log.info("Posting to Bluesky")
+
     bsky_user = os.getenv("BSKY_USERNAME")
 
     if bsky_user is None:
@@ -155,37 +161,35 @@ def post_to_bluesky(post: Post) -> None:
         client = atproto.Client(base_url="https://bsky.social")
         client.login(bsky_user, bsky_pass)
 
-        post_data = {
+        record = {
             "$type": "app.bsky.feed.post",
-            "text": f"{post.message} {post.link}",
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "text": f"{post.title} - {post.description}",
+            "createdAt": client.get_current_time_iso(),
         }
 
+        log.debug(f"Bluesky post image path: {post.image_path}")
         if post.image_path is not None:
             with open(post.image_path, "rb") as fp:
                 image_data = fp.read()
 
             uploaded_image = client.com.atproto.repo.upload_blob(image_data)
-
-            post_data |= {
-                "embed": {
-                    "$type": "app.bsky.embed.images",
-                    "images": [
-                        {
-                            "image": uploaded_image.blob,
-                            "alt": post.image_alt,
-                        }
-                    ],
-                }
+            embed = {
+                "$type": "app.bsky.embed.external",
+                "external": {
+                    "uri": post.link,
+                    "title": post.title,
+                    "description": post.description,
+                },
             }
 
-        client.send(
-            "com.atproto.repo.createRecord",
-            {
-                "repo": client.me.did,
-                "collection": "app.bsky.feed.post",
-                "record": post_data,
-            },
+            if uploaded_image.blob:
+                embed["external"]["thumb"] = uploaded_image.blob
+
+            record |= {"embed": embed}
+
+        client.app.bsky.feed.post.create(
+            repo=client.me.did,
+            record=record,
         )
     except AtProtocolError as e:
         log.exception("Couldn't post to Bluesky")
