@@ -7,6 +7,12 @@ on:
   # schedule:
   #   - cron: '30 11 * * 2' # Every Tuesday at 11:30 UTC (12:30 GMT+1)
   workflow_dispatch:
+    inputs:
+      force_latest:
+        description: Enter the number of recent feed entries to force re-post
+        type: number
+        default: 0
+
 
 jobs:
   rss:
@@ -23,7 +29,9 @@ jobs:
         run: uv sync
 
       - name: Run RSS to Social
-        run: uv run rss_to_social.py
+        run: >
+          uv run rss_to_social.py \
+            --force-latest ${{ github.event.inputs.force_latest }}
         env:
           RSS_FEED_URLS: ${{ vars.RSS_FEED_URLS }}
 
