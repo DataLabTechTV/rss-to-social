@@ -29,7 +29,7 @@ jobs:
         run: uv sync
 
       - name: Run RSS to Social
-        run: >
+        run: |
           uv run rss_to_social.py \
             --force-latest ${{ github.event.inputs.force_latest }}
         env:
