@@ -1,11 +1,19 @@
 import json
 import os
 import sys
-from datetime import datetime
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from time import mktime, struct_time
+from typing import Optional, Self
 
+import atproto
 import click
 import feedparser
+import requests
+from atproto.exceptions import AtProtocolError
+from feedparser import FeedParserDict
 from loguru import logger as log
 
 
@@ -35,22 +43,6 @@ def load_last_runs() -> dict[str, struct_time]:
     return last_runs
 
 
-def load_feed_urls() -> list[str]:
-    log.info("Loading feed URLs")
-
-    feed_urls = os.getenv("RSS_FEED_URLS")
-
-    if feed_urls is None:
-        log.warning("No feed URLs found in RSS_FEED_URLS")
-        sys.exit(2)
-
-    feed_urls = feed_urls.splitlines()
-
-    log.info(f"Feed URLs found: {len(feed_urls)}")
-
-    return feed_urls
-
-
 def store_last_runs(last_runs: dict[str, struct_time]) -> None:
     log.info("Saving last run dates")
 
@@ -70,6 +62,135 @@ def store_last_runs(last_runs: dict[str, struct_time]) -> None:
         json.dump(iso_last_runs, fp)
 
 
+def load_feed_urls() -> list[str]:
+    log.info("Loading feed URLs")
+
+    feed_urls = os.getenv("RSS_FEED_URLS")
+
+    if feed_urls is None:
+        log.warning("No feed URLs found in RSS_FEED_URLS")
+        sys.exit(2)
+
+    feed_urls = feed_urls.splitlines()
+
+    log.info(f"Feed URLs found: {len(feed_urls)}")
+
+    return feed_urls
+
+
+def load_active_socials() -> set[str]:
+    log.info("Loading active socials")
+
+    active_socials = os.getenv("ACTIVE_SOCIALS")
+
+    if active_socials is None:
+        log.warning("No active socials found in ACTIVE_SOCIALS")
+        sys.exit(2)
+
+    active_socials = active_socials.splitlines()
+
+    log.info(f"Active socials found: {', '.join(active_socials)}")
+
+    return set(active_socials)
+
+
+def download_image(url: str) -> Path:
+    response = requests.get(url)
+    response.raise_for_status()
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        path = Path(tmp.name)
+
+    with open(path, "wb") as f:
+        f.write(response.content)
+
+    return path
+
+
+@dataclass
+class Post:
+    message: str
+    link: Optional[str] = None
+    image_path: Optional[str] = None
+    image_alt: Optional[str] = None
+
+    @classmethod
+    def from_entry(cls, entry: FeedParserDict) -> Self:
+        post = cls(message=f"{entry.title} - {entry.summary}")
+
+        post.link = entry.link
+
+        if len(entry.media_content) > 0:
+            img_url = entry.media_content[0].get("url")
+
+            if img_url is not None:
+                post.image_path = download_image(img_url)
+                post.image_alt = f"{entry.title} Thumbnail"
+
+        return post
+
+    def __del__(self):
+        if self.image_path.exists():
+            try:
+                self.image_path.unlink()
+                log.info(f"Post temporary image deleted: {self.image_path}")
+            except Exception:
+                log.warning(f"Failed to delete post temporary image: {self.image_path}")
+
+
+def post_to_bluesky(post: Post) -> None:
+    bsky_user = os.getenv("BSKY_USERNAME")
+
+    if bsky_user is None:
+        log.error("Could not post to Bluesky: BSKY_USERNAME not set")
+        return False
+
+    bsky_pass = os.getenv("BSKY_PASSWORD")
+
+    if bsky_pass is None:
+        log.error("Could not post to Bluesky: BSKY_PASSWORD not set")
+        return False
+
+    try:
+        client = atproto.Client(base_url="https://bsky.social")
+        client.login(bsky_user, bsky_pass)
+
+        post_data = {
+            "$type": "app.bsky.feed.post",
+            "text": f"{post.message} {post.link}",
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+        if post.image_path is not None:
+            with open(post.image_path, "rb") as fp:
+                image_data = fp.read()
+
+            uploaded_image = client.com.atproto.repo.upload_blob(image_data)
+
+            post_data |= {
+                "embed": {
+                    "$type": "app.bsky.embed.images",
+                    "images": [
+                        {
+                            "image": uploaded_image.blob,
+                            "alt": post.image_alt,
+                        }
+                    ],
+                }
+            }
+
+        client.send(
+            "com.atproto.repo.createRecord",
+            {
+                "repo": client.me.did,
+                "collection": "app.bsky.feed.post",
+                "record": post_data,
+            },
+        )
+    except AtProtocolError as e:
+        log.exception("Couldn't post to Bluesky")
+
+
 @click.command()
 @click.option("--force-latest", type=click.INT, default=0)
 def main(force_latest: int):
@@ -77,6 +198,7 @@ def main(force_latest: int):
 
     last_runs = load_last_runs()
     feed_urls = load_feed_urls()
+    active_socials = load_active_socials()
     now = datetime.now().timetuple()
 
     for idx, feed_url in enumerate(feed_urls, 1):
@@ -92,7 +214,7 @@ def main(force_latest: int):
         new_entries = []
 
         if feed_url not in last_runs:
-            log.info("No previous runs found")
+            log.info(f"No previous runs found for: {feed_url}")
 
         if force_latest > 0:
             log.info(f"Forcing re-post for {force_latest} most recent entries")
@@ -107,7 +229,13 @@ def main(force_latest: int):
 
         if len(new_entries) > 0:
             log.info(f"Feed #{idx} was updated: processing")
-            log.debug(new_entries)
+
+            for entry in new_entries:
+                post = Post.from_entry(entry)
+
+                if "bluesky" in active_socials:
+                    post_to_bluesky(post)
+
             last_runs[feed_url] = now
         else:
             log.info(f"Nothing to do for feed #{idx}: skipping")
