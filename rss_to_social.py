@@ -101,7 +101,7 @@ def main(force_latest: int):
 
         if len(new_entries) > 0:
             log.info(f"Feed #{idx} was updated: processing")
-            log.debug(feed)
+            log.debug(new_entries)
             last_runs[feed_url] = now
         else:
             log.info(f"Nothing to do for feed #{idx}: skipping")
