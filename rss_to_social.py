@@ -62,7 +62,7 @@ def save_last_runs(last_runs: dict[str, struct_time]) -> None:
 
     with open(last_runs_path, "w") as fp:
         iso_last_runs = {
-            feed_url: datetime(mktime(struct_time_date)).timestamp()
+            feed_url: mktime(struct_time_date)
             for feed_url, struct_time_date in last_runs.items()
         }
         json.dump(iso_last_runs, fp)
