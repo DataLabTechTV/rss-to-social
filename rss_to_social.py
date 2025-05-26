@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from time import struct_time
+from time import mktime, struct_time
 
 import click
 import feedparser
@@ -28,8 +28,8 @@ def load_last_runs() -> dict[str, struct_time]:
         with open(last_runs_path, "r") as fp:
             last_runs = json.load(fp)
             last_runs = {
-                feed_url: datetime.fromisoformat(v).timetuple()
-                for feed_url, v in last_runs.items()
+                feed_url: datetime.fromtimestamp(iso_date).timetuple()
+                for feed_url, iso_date in last_runs.items()
             }
 
     return last_runs
@@ -61,7 +61,11 @@ def save_last_runs(last_runs: dict[str, struct_time]) -> None:
     log.info(f"Wrote last run dates: {last_runs_path}")
 
     with open(last_runs_path, "w") as fp:
-        json.dump(last_runs, fp)
+        iso_last_runs = {
+            feed_url: datetime(mktime(struct_time_date)).timestamp()
+            for feed_url, struct_time_date in last_runs.items()
+        }
+        json.dump(iso_last_runs, fp)
 
 
 @click.command()
