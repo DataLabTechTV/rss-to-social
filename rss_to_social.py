@@ -46,10 +46,10 @@ def load_feed_urls() -> list[str]:
 
     log.info(f"Feed URLs found: {len(feed_urls)}")
 
-    return feed_urls.split("\n")
+    return feed_urls.splitlines()
 
 
-def save_last_runs(last_runs: dict[str, struct_time]) -> None:
+def store_last_runs(last_runs: dict[str, struct_time]) -> None:
     log.info("Saving last run dates")
 
     last_runs_path = os.getenv("LAST_RUNS_PATH")
@@ -85,7 +85,7 @@ def main():
             print(feed)
             last_runs[feed_url] = now
 
-    save_last_runs(last_runs)
+    store_last_runs(last_runs)
 
     log.info("Done")
 
