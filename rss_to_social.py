@@ -91,6 +91,12 @@ def main(force_latest: int):
 
         new_entries = []
 
+        if feed_url not in last_runs:
+            log.info("No previous runs found")
+
+        if force_latest > 0:
+            log.info(f"Forcing re-post for {force_latest} most recent entries")
+
         for n, entry in enumerate(sorted_entries):
             if (
                 feed_url not in last_runs
