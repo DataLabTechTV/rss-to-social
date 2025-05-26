@@ -1,0 +1,11 @@
+[project]
+name = "rss-to-social"
+version = "0.1.0"
+description = "RSS to Social uses GitHub Actions to monitor RSS feeds and post new articles to social media."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.2.1",
+    "feedparser>=6.0.11",
+    "loguru>=0.7.3",
+]
