@@ -120,7 +120,7 @@ class Post:
 
         post.link = entry.link
 
-        if entry.media_content is not None and len(entry.media_content) > 0:
+        if "media_content" in entry and len(entry.media_content) > 0:
             img_url = entry.media_content[0].get("url")
 
             if img_url is not None:
