@@ -82,7 +82,8 @@ def main():
         feed = feedparser.parse(feed_url)
 
         if last_runs.get(feed_url) is None or last_runs[feed_url] < now:
-            print(feed)
+            log.info(f"Feed #{idx} was updated: processing")
+            log.debug(feed)
             last_runs[feed_url] = now
 
     store_last_runs(last_runs)
