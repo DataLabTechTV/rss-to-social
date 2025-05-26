@@ -44,9 +44,11 @@ def load_feed_urls() -> list[str]:
         log.warning("No feed URLs found in RSS_FEED_URLS")
         sys.exit(2)
 
+    feed_urls = feed_urls.splitlines()
+
     log.info(f"Feed URLs found: {len(feed_urls)}")
 
-    return feed_urls.splitlines()
+    return feed_urls
 
 
 def store_last_runs(last_runs: dict[str, struct_time]) -> None:
@@ -94,6 +96,8 @@ def main():
             log.info(f"Feed #{idx} was updated: processing")
             log.debug(feed)
             last_runs[feed_url] = now
+        else:
+            log.info(f"Nothing to do for feed #{idx}: skipping")
 
     store_last_runs(last_runs)
 
