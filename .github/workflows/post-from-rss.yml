@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       force_latest:
-        description: Enter the number of recent feed entries to force re-post
+        description: force_latest
         type: number
         default: 0
 
