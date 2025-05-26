@@ -81,17 +81,19 @@ def main():
 
         feed = feedparser.parse(feed_url)
 
-        if last_runs.get(feed_url) is None:
-            new_entries = []
+        new_entries = []
 
-            for entry in feed.entries:
-                if entry.published_parsed > last_runs[feed_url]:
-                    new_entries.append(entry)
+        for entry in feed.entries:
+            if (
+                feed_url not in last_runs
+                or entry.published_parsed > last_runs[feed_url]
+            ):
+                new_entries.append(entry)
 
-            if len(new_entries) > 0:
-                log.info(f"Feed #{idx} was updated: processing")
-                log.debug(feed)
-                last_runs[feed_url] = now
+        if len(new_entries) > 0:
+            log.info(f"Feed #{idx} was updated: processing")
+            log.debug(feed)
+            last_runs[feed_url] = now
 
     store_last_runs(last_runs)
 
