@@ -71,7 +71,7 @@ def store_last_runs(last_runs: dict[str, struct_time]) -> None:
 
 
 @click.command()
-@click.option("--force-latest", click.INT, default=0)
+@click.option("--force-latest", type=click.INT, default=0)
 def main(force_latest: int):
     log.info("Running RSS to Social")
 
