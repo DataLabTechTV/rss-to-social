@@ -130,7 +130,7 @@ class Post:
         return post
 
     def __del__(self):
-        if self.image_path.exists():
+        if self.image_path is not None and self.image_path.exists():
             try:
                 self.image_path.unlink()
                 log.info(f"Post temporary image deleted: {self.image_path}")
