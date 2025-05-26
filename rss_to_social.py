@@ -81,7 +81,7 @@ def main():
             print(feed)
             last_runs[feed_url] = now
 
-    save_last_runs()
+    save_last_runs(last_runs)
 
     log.info("Done")
 
