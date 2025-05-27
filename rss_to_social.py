@@ -112,31 +112,38 @@ def download_image(url: str) -> Path:
     return path
 
 
-def compress_image(
+def resize_image(
     input_path: str,
     max_bytes: int = 1024 * 1024,
-    max_height: int = 720,
     format="png",
 ) -> bytes:
-    with Image.open(input_path) as img:
-        # Step 1: Resize based on max height (if needed)
-        if img.height > max_height:
-            scale = max_height / img.height
-            img = img.resize((int(img.width * scale), max_height), Image.LANCZOS)
+    log.info(f"Compressing image: {input_path}")
 
-        # Step 2: Compress by reducing quality until size is under limit
-        for quality in range(90, 30, -5):  # Decrease quality in steps
-            buffer = BytesIO()
-            img.save(buffer, format=format, quality=quality, optimize=True)
+    original_size = os.path.getsize(input_path)
+    size = original_size
 
-            size = buffer.tell()
+    for max_height in 720, 480, 360:
+        with Image.open(input_path) as img:
+            if img.height > max_height:
+                scale = max_height / img.height
+                img = img.resize((int(img.width * scale), max_height), Image.LANCZOS)
+
+                buffer = BytesIO()
+                img.save(buffer, format=format, optimize=True)
+
+                size = buffer.tell()
 
             if size <= max_bytes:
-                log.debug(f"Image compressed to {quality}%")
+                if size == original_size:
+                    log.debug("Original image size used")
+                else:
+                    log.debug(f"Image resized to {max_height}p")
+
                 buffer.seek(0)
+
                 return buffer.read()
 
-        raise ValueError("Cannot compress image below max size limit.")
+    raise ValueError("Cannot compress image below max size limit.")
 
 
 @dataclass
@@ -202,7 +209,7 @@ def post_to_bluesky(post: Post) -> None:
         log.debug(f"Bluesky post image path: {post.image_path}")
 
         if post.image_path is not None:
-            image_data = compress_image(post.image_path)
+            image_data = resize_image(post.image_path)
             uploaded_image = client.com.atproto.repo.upload_blob(image_data)
 
             embed = {
