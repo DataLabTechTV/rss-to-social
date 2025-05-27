@@ -241,7 +241,19 @@ def post_to_reddit(post: Post) -> None:
     subreddit.submit(title=post.title, url=post.link)
 
 
-def post_to_discord(post: Post) -> None: ...
+def post_to_discord(post: Post) -> None:
+    webhook_url = os.getenv("DISCORD_WEBHOOK")
+
+    if webhook_url is None:
+        log.error(f"Could not post to Discord: DISCORD_WEBHOOK not set")
+        return
+
+    payload = {"content": f"{post.title} - {post.description} {post.link}"}
+    response = requests.post(webhook_url, data=payload)
+
+    if not response.ok:
+        log.error(f"Discord post failed: {response.status_code} - {response.text}")
+        return
 
 
 @click.command()
