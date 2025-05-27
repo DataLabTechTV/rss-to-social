@@ -4,8 +4,8 @@ env:
   LAST_RUNS_PATH: .last_runs.json
 
 on:
-  # schedule:
-  #   - cron: '30 11 * * 2' # Every Tuesday at 11:30 UTC (12:30 GMT+1)
+  schedule:
+    - cron: '30 11 * * 2' # Every Tuesday at 11:30 UTC (12:30 GMT+1)
   workflow_dispatch:
     inputs:
       force_latest:
@@ -37,6 +37,12 @@ jobs:
           ACTIVE_SOCIALS: ${{ vars.ACTIVE_SOCIALS }}
           BSKY_USERNAME: ${{ vars.BSKY_USERNAME }}
           BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_SUBREDDIT: ${{ vars.REDDIT_SUBREDDIT }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Commit updated $LAST_RUNS_PATH if changed
         run: |
