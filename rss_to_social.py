@@ -11,10 +11,13 @@ from typing import Optional, Self
 import atproto
 import click
 import feedparser
+import praw
 import requests
 from atproto.exceptions import AtProtocolError
 from feedparser import FeedParserDict
 from loguru import logger as log
+
+USER_AGENT = "github-action-rss-to-social/0.1 by @DataLabTechTV"
 
 
 def load_last_runs() -> dict[str, struct_time]:
@@ -149,13 +152,13 @@ def post_to_bluesky(post: Post) -> None:
 
     if bsky_user is None:
         log.error("Could not post to Bluesky: BSKY_USERNAME not set")
-        return False
+        return
 
     bsky_pass = os.getenv("BSKY_PASSWORD")
 
     if bsky_pass is None:
         log.error("Could not post to Bluesky: BSKY_PASSWORD not set")
-        return False
+        return
 
     try:
         client = atproto.Client(base_url="https://bsky.social")
@@ -193,6 +196,52 @@ def post_to_bluesky(post: Post) -> None:
         )
     except AtProtocolError as e:
         log.exception("Couldn't post to Bluesky")
+
+
+def post_to_reddit(post: Post) -> None:
+    client_id = os.getenv("REDDIT_CLIENT_ID")
+
+    if client_id is None:
+        log.error(f"Could not post to Reddit: REDDIT_CLIENT_ID not set")
+        return
+
+    client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+
+    if client_secret is None:
+        log.error(f"Could not post to Reddit: REDDIT_CLIENT_SECRET not set")
+        return
+
+    username = os.getenv("REDDIT_USERNAME")
+
+    if username is None:
+        log.error(f"Could not post to Reddit: REDDIT_USERNAME not set")
+        return
+
+    password = os.getenv("REDDIT_PASSWORD")
+
+    if password is None:
+        log.error(f"Could not post to Reddit: REDDIT_PASSWORD not set")
+        return
+
+    subreddit = os.getenv("REDDIT_SUBREDDIT")
+
+    if subreddit is None:
+        log.error("Could not post to Reddit: REDDIT_SUBREDDIT not set")
+        return
+
+    reddit = praw.Reddit(
+        client_id=client_id,
+        client_secret=client_secret,
+        username=username,
+        password=password,
+        user_agent=USER_AGENT,
+    )
+
+    subreddit = reddit.subreddit(subreddit)
+    subreddit.submit(title=post.title, url=post.link)
+
+
+def post_to_discord(post: Post) -> None: ...
 
 
 @click.command()
@@ -239,6 +288,12 @@ def main(force_latest: int):
 
                 if "bluesky" in active_socials:
                     post_to_bluesky(post)
+
+                if "reddit" in active_socials:
+                    post_to_reddit(post)
+
+                if "discord" in active_socials:
+                    post_to_discord(post)
 
             last_runs[feed_url] = now
         else:
