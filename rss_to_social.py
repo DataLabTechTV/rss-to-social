@@ -4,6 +4,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from time import mktime, struct_time
 from typing import Optional, Self
@@ -16,6 +17,7 @@ import requests
 from atproto.exceptions import AtProtocolError
 from feedparser import FeedParserDict
 from loguru import logger as log
+from PIL import Image
 
 USER_AGENT = "github-action-rss-to-social/0.1 by @DataLabTechTV"
 
@@ -110,6 +112,33 @@ def download_image(url: str) -> Path:
     return path
 
 
+def compress_image(
+    input_path: str,
+    max_bytes: int = 1024 * 1024,
+    max_height: int = 720,
+    format="png",
+) -> bytes:
+    with Image.open(input_path) as img:
+        # Step 1: Resize based on max height (if needed)
+        if img.height > max_height:
+            scale = max_height / img.height
+            img = img.resize((int(img.width * scale), max_height), Image.LANCZOS)
+
+        # Step 2: Compress by reducing quality until size is under limit
+        for quality in range(90, 30, -5):  # Decrease quality in steps
+            buffer = BytesIO()
+            img.save(buffer, format=format, quality=quality, optimize=True)
+
+            size = buffer.tell()
+
+            if size <= max_bytes:
+                log.debug(f"Image compressed to {quality}%")
+                buffer.seek(0)
+                return buffer.read()
+
+        raise ValueError("Cannot compress image below max size limit.")
+
+
 @dataclass
 class Post:
     title: str
@@ -171,11 +200,11 @@ def post_to_bluesky(post: Post) -> None:
         }
 
         log.debug(f"Bluesky post image path: {post.image_path}")
-        if post.image_path is not None:
-            with open(post.image_path, "rb") as fp:
-                image_data = fp.read()
 
+        if post.image_path is not None:
+            image_data = compress_image(post.image_path)
             uploaded_image = client.com.atproto.repo.upload_blob(image_data)
+
             embed = {
                 "$type": "app.bsky.embed.external",
                 "external": {
@@ -199,6 +228,8 @@ def post_to_bluesky(post: Post) -> None:
 
 
 def post_to_reddit(post: Post) -> None:
+    log.info("Posting to Reddit")
+
     client_id = os.getenv("REDDIT_CLIENT_ID")
 
     if client_id is None:
@@ -242,6 +273,8 @@ def post_to_reddit(post: Post) -> None:
 
 
 def post_to_discord(post: Post) -> None:
+    log.info("Posting to Discord")
+
     webhook_url = os.getenv("DISCORD_WEBHOOK")
 
     if webhook_url is None:
