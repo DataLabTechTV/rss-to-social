@@ -44,7 +44,7 @@ jobs:
           REDDIT_SUBREDDIT: ${{ vars.REDDIT_SUBREDDIT }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Commit updated ${{ LAST_RUNS_PATH }} if changed
+      - name: Commit updated timestamps for last runs if changed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
