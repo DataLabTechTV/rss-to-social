@@ -297,7 +297,7 @@ def post_to_discord(post: Post) -> None:
 
 
 @click.command()
-@click.option("--force-latest", type=click.INT, default=0)
+@click.option("--force-latest", envvar="FORCE_LATEST", type=click.INT, default=0)
 def main(force_latest: int):
     log.info("Running RSS to Social")
 

@@ -29,10 +29,8 @@ jobs:
         run: uv sync
 
       - name: Run RSS to Social
-        run: |
-          uv run rss_to_social.py \
-            --force-latest ${{ github.event.inputs.force_latest }}
         env:
+          FORCE_LATEST: ${{ github.event.inputs.force_latest }}
           RSS_FEED_URLS: ${{ vars.RSS_FEED_URLS }}
           ACTIVE_SOCIALS: ${{ vars.ACTIVE_SOCIALS }}
           BSKY_USERNAME: ${{ vars.BSKY_USERNAME }}
@@ -43,6 +41,7 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           REDDIT_SUBREDDIT: ${{ vars.REDDIT_SUBREDDIT }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: uv run rss_to_social.py
 
       - name: Commit updated ${{ env.LAST_RUNS_PATH }} if changed
         run: |
