@@ -128,10 +128,10 @@ def resize_image(
                 scale = max_height / img.height
                 img = img.resize((int(img.width * scale), max_height), Image.LANCZOS)
 
-                buffer = BytesIO()
-                img.save(buffer, format=format, optimize=True)
+            buffer = BytesIO()
+            img.save(buffer, format=format, optimize=True)
 
-                size = buffer.tell()
+            size = buffer.tell()
 
             if size <= max_bytes:
                 if size == original_size:
