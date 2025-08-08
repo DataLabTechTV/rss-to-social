@@ -8,6 +8,7 @@ from io import BytesIO
 from pathlib import Path
 from time import mktime, struct_time
 from typing import Optional, Self
+from urllib.parse import urlparse
 
 import atproto
 import click
@@ -103,7 +104,10 @@ def download_image(url: str) -> Path:
     response = requests.get(url)
     response.raise_for_status()
 
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+    path = urlparse(url).path
+    suffix = Path(path).suffix
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         path = Path(tmp.name)
 
     with open(path, "wb") as f:
