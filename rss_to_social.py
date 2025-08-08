@@ -112,13 +112,10 @@ def download_image(url: str) -> Path:
     return path
 
 
-def resize_image(
-    input_path: str,
-    max_bytes: int = 1024 * 1024,
-    format="png",
-) -> bytes:
+def resize_image(input_path: str, max_bytes: int = 1024 * 1024) -> bytes:
     log.info(f"Compressing image: {input_path}")
 
+    format = Path(input_path).suffix.lstrip(".")
     original_size = os.path.getsize(input_path)
     size = original_size
 
