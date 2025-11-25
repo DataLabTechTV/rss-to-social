@@ -5,7 +5,7 @@ env:
 
 on:
   schedule:
-    - cron: '30 11 * * 2' # Every Tuesday at 11:30 UTC (12:30 GMT+1)
+    - cron: '30 12 * * 2' # Every Tuesday at 12:30 UTC (12:30 GMT)
   workflow_dispatch:
     inputs:
       force_latest:
