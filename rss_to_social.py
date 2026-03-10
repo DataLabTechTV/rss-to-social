@@ -119,9 +119,12 @@ def download_image(url: str) -> Path:
 def resize_image(input_path: str, max_bytes: int = 1024 * 1024) -> bytes:
     log.info(f"Compressing image: {input_path}")
 
-    format = Path(input_path).suffix.lstrip(".")
+    format = Path(input_path).suffix.lstrip(".").upper()
     original_size = os.path.getsize(input_path)
     size = original_size
+
+    if format == "JPG":
+        format = "JPEG"
 
     for max_height in 720, 480, 360:
         with Image.open(input_path) as img:
