@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import tempfile
+import textwrap
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
@@ -206,7 +207,11 @@ def post_to_bluesky(post: Post) -> None:
 
         record = {
             "$type": "app.bsky.feed.post",
-            "text": f"{post.title} - {post.description}",
+            "text": textwrap.shorten(
+                f"{post.title} - {post.description}",
+                width=300,
+                placeholder="...",
+            ),
             "createdAt": client.get_current_time_iso(),
         }
 
